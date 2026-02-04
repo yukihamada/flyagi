@@ -3,12 +3,15 @@ import { Wifi, WifiOff } from 'lucide-react'
 import { ChatContainer } from './components/Chat/ChatContainer'
 import { DiffViewer } from './components/Diff/DiffViewer'
 import { ProviderSelector } from './components/Provider/ProviderSelector'
+import { LanguageSwitch } from './components/Language/LanguageSwitch'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useChat } from './hooks/useChat'
 import { useVoice } from './hooks/useVoice'
+import { useLanguage } from './contexts/LanguageContext'
 import { api, type ProvidersResponse } from './services/api'
 
 function App() {
+  const { t } = useLanguage()
   const { send, subscribe, connected } = useWebSocket()
   const [providers, setProviders] = useState<ProvidersResponse>({
     llm: [],
@@ -54,7 +57,7 @@ function App() {
     <div className="flex h-screen flex-col bg-gray-950 text-gray-100">
       <header className="flex items-center justify-between border-b border-gray-800 px-4 py-2.5">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold">FlyAGI</h1>
+          <h1 className="text-lg font-bold">{t('app.title')}</h1>
           <div className="flex items-center gap-1 text-xs">
             {connected ? (
               <Wifi className="h-3.5 w-3.5 text-green-500" />
@@ -66,7 +69,7 @@ function App() {
         <div className="flex items-center gap-4">
           {providers.llm.length > 0 && (
             <ProviderSelector
-              label="LLM"
+              label={t('provider.llm')}
               providers={providers.llm}
               selected={selectedLLM}
               onChange={setSelectedLLM}
@@ -74,7 +77,7 @@ function App() {
           )}
           {providers.tts.length > 0 && (
             <ProviderSelector
-              label="TTS"
+              label={t('provider.tts')}
               providers={providers.tts}
               selected={selectedTTS}
               onChange={setSelectedTTS}
@@ -82,12 +85,13 @@ function App() {
           )}
           {providers.stt.length > 0 && (
             <ProviderSelector
-              label="STT"
+              label={t('provider.stt')}
               providers={providers.stt}
               selected={selectedSTT}
               onChange={setSelectedSTT}
             />
           )}
+          <LanguageSwitch />
         </div>
       </header>
 
