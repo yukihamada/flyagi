@@ -1,0 +1,10 @@
+bin/
+server
+web/node_modules/
+web/dist/
+.env
+.env.local
+.env.production
+*.exe
+*.test
+*.mp3
