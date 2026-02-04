@@ -1,5 +1,6 @@
 import { useState, useCallback, type KeyboardEvent } from 'react'
 import { Send, Square, Mic, MicOff, Loader2 } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface Props {
   onSend: (text: string) => void
@@ -20,6 +21,7 @@ export function ChatInput({
   onStartRecording,
   onStopRecording,
 }: Props) {
+  const { t } = useLanguage()
   const [input, setInput] = useState('')
 
   const handleSend = useCallback(() => {
@@ -44,7 +46,7 @@ export function ChatInput({
       <div className="flex items-end gap-2">
         <textarea
           className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-900 px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-          placeholder="Send a message..."
+          placeholder={t('chat.placeholder')}
           rows={1}
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -62,7 +64,7 @@ export function ChatInput({
           }`}
           onClick={isRecording ? onStopRecording : onStartRecording}
           disabled={isTranscribing || isStreaming}
-          title={isRecording ? 'Stop recording' : 'Start recording'}
+          title={isRecording ? t('chat.recording.stop') : t('chat.recording.start')}
         >
           {isTranscribing ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -77,7 +79,7 @@ export function ChatInput({
           <button
             className="rounded-xl bg-red-600 p-2.5 text-white transition-colors hover:bg-red-700"
             onClick={onCancel}
-            title="Stop generating"
+            title={t('chat.generating.stop')}
           >
             <Square className="h-5 w-5" />
           </button>
@@ -86,7 +88,7 @@ export function ChatInput({
             className="rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             onClick={handleSend}
             disabled={!input.trim()}
-            title="Send message"
+            title={t('chat.send')}
           >
             <Send className="h-5 w-5" />
           </button>
