@@ -1,4 +1,5 @@
 import { Check, X } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface FileDiff {
   path: string
@@ -14,11 +15,12 @@ interface Props {
 }
 
 export function DiffViewer({ requestId, description, diffs, onApprove, onReject }: Props) {
+  const { t } = useLanguage()
   return (
     <div className="mx-4 my-3 rounded-xl border border-gray-700 bg-gray-900 overflow-hidden">
       <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
         <div>
-          <h3 className="text-sm font-medium text-gray-200">Code Change Request</h3>
+          <h3 className="text-sm font-medium text-gray-200">{t('diff.title')}</h3>
           <p className="text-xs text-gray-400 mt-0.5">{description}</p>
         </div>
         <div className="flex gap-2">
@@ -27,14 +29,14 @@ export function DiffViewer({ requestId, description, diffs, onApprove, onReject 
             onClick={() => onApprove(requestId)}
           >
             <Check className="h-3.5 w-3.5" />
-            Approve
+            {t('diff.approve')}
           </button>
           <button
             className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
             onClick={() => onReject(requestId)}
           >
             <X className="h-3.5 w-3.5" />
-            Reject
+            {t('diff.reject')}
           </button>
         </div>
       </div>
@@ -45,7 +47,7 @@ export function DiffViewer({ requestId, description, diffs, onApprove, onReject 
               {fileDiff.path}
             </div>
             <pre className="px-4 py-3 text-xs font-mono text-gray-400 overflow-x-auto whitespace-pre-wrap">
-              {fileDiff.diff || '(new file)'}
+              {fileDiff.diff || t('diff.newFile')}
             </pre>
           </div>
         ))}
