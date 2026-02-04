@@ -227,33 +227,36 @@ func (h *ChatHandler) handleSelfModApprove(client *Client, payload json.RawMessa
 	}
 
 	go func() {
-		// Send status: applying
-		h.sendStatus(client, p.RequestID, "applying", "変更を適用中...", "")
-
-		// Apply changes to the repo
-		if err := h.engine.ApproveAndApply(p.RequestID); err != nil {
-			slog.Error("selfmod apply failed", "error", err)
-			h.sendStatus(client, p.RequestID, "error", "変更の適用に失敗: "+err.Error(), "")
+		cr, ok := h.engine.GetRequest(p.RequestID)
+		if !ok {
+			h.sendStatus(client, p.RequestID, "error", "変更リクエストが見つかりません", "")
 			return
 		}
 
-		// If git/github are configured, create a PR
+		// If git/github are configured, create branch FIRST (before applying changes)
+		var branchName string
 		if h.gitSvc != nil && h.ghClient != nil {
-			cr, ok := h.engine.GetRequest(p.RequestID)
-			if !ok {
-				h.sendStatus(client, p.RequestID, "error", "変更リクエストが見つかりません", "")
-				return
-			}
-
-			branchName := fmt.Sprintf("selfmod/%s", p.RequestID[:8])
-
-			h.sendStatus(client, p.RequestID, "pushing", "ブランチを作成してpush中...", "")
+			branchName = fmt.Sprintf("selfmod/%s", p.RequestID[:8])
+			h.sendStatus(client, p.RequestID, "pushing", "ブランチを作成中...", "")
 
 			if err := h.gitSvc.CreateBranch(branchName); err != nil {
 				slog.Error("git branch failed", "error", err)
 				h.sendStatus(client, p.RequestID, "error", "ブランチ作成に失敗: "+err.Error(), "")
 				return
 			}
+		}
+
+		// Apply changes to the repo
+		h.sendStatus(client, p.RequestID, "applying", "変更を適用中...", "")
+		if err := h.engine.ApproveAndApply(p.RequestID); err != nil {
+			slog.Error("selfmod apply failed", "error", err)
+			h.sendStatus(client, p.RequestID, "error", "変更の適用に失敗: "+err.Error(), "")
+			return
+		}
+
+		// Commit, push, and create PR
+		if h.gitSvc != nil && h.ghClient != nil {
+			h.sendStatus(client, p.RequestID, "pushing", "コミットしてpush中...", "")
 
 			commitMsg := fmt.Sprintf("selfmod: %s", cr.Description)
 			if _, err := h.gitSvc.CommitAll(commitMsg); err != nil {
