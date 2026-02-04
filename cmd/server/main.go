@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,10 +12,13 @@ import (
 
 	"github.com/yuki/flyagi/internal/api"
 	"github.com/yuki/flyagi/internal/config"
+	"github.com/yuki/flyagi/internal/git"
+	"github.com/yuki/flyagi/internal/github"
 	"github.com/yuki/flyagi/internal/provider"
 	"github.com/yuki/flyagi/internal/provider/llm"
 	"github.com/yuki/flyagi/internal/provider/stt"
 	"github.com/yuki/flyagi/internal/provider/tts"
+	"github.com/yuki/flyagi/internal/selfmod"
 	"github.com/yuki/flyagi/internal/ws"
 )
 
@@ -34,8 +38,34 @@ func main() {
 	registry := provider.NewRegistry()
 	registerProviders(cfg, registry)
 
+	// Initialize self-modification services
+	var engine *selfmod.Engine
+	var gitSvc *git.Service
+	var ghClient *github.Client
+
+	if cfg.RepoPath != "" {
+		engine = selfmod.NewEngine(cfg.RepoPath)
+		slog.Info("selfmod engine initialized", "repo_path", cfg.RepoPath)
+	}
+
+	if cfg.GitHubToken != "" && cfg.GitHubOwner != "" && cfg.GitHubRepo != "" {
+		gitSvc = git.NewService(cfg.RepoPath, cfg.GitHubToken)
+		ghClient = github.NewClient(cfg.GitHubToken, cfg.GitHubOwner, cfg.GitHubRepo)
+
+		// Clone or open the repo
+		cloneURL := fmt.Sprintf("https://github.com/%s/%s.git", cfg.GitHubOwner, cfg.GitHubRepo)
+		if err := gitSvc.CloneOrOpen(cloneURL); err != nil {
+			slog.Error("failed to clone/open repo", "error", err)
+			// Non-fatal: continue without git
+			gitSvc = nil
+			ghClient = nil
+		} else {
+			slog.Info("git service initialized", "owner", cfg.GitHubOwner, "repo", cfg.GitHubRepo)
+		}
+	}
+
 	// Build WebSocket hub
-	chatHandler := ws.NewChatHandler(registry)
+	chatHandler := ws.NewChatHandler(registry, engine, gitSvc, ghClient)
 	hub := ws.NewHub(chatHandler, cfg.AllowedOrigin)
 
 	router := api.NewRouter(cfg, registry, hub)

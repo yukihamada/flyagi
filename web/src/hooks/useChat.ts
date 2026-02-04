@@ -64,7 +64,31 @@ export function useChat({ send, subscribe, providerId }: UseChatOptions) {
           break
         }
         case 'selfmod.diff': {
-          setPendingDiff(payload as unknown as DiffData)
+          const raw = payload as Record<string, unknown>
+          setPendingDiff({
+            requestId: (raw.request_id as string) || '',
+            description: (raw.description as string) || '',
+            diffs: (raw.diffs as Array<{ path: string; diff: string }>) || [],
+          })
+          break
+        }
+        case 'selfmod.status': {
+          const status = (payload?.status as string) || ''
+          const message = (payload?.message as string) || ''
+          const prUrl = (payload?.pr_url as string) || ''
+          let statusText = message
+          if (prUrl) {
+            statusText += `\n[PR: ${prUrl}](${prUrl})`
+          }
+          setMessages(prev => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: `[${status}] ${statusText}`,
+              timestamp: Date.now(),
+            },
+          ])
           break
         }
         case 'error': {

@@ -32,7 +32,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *config.Config) {
 	}
 
 	reg := provider.NewRegistry()
-	handler := ws.NewChatHandler(reg)
+	handler := ws.NewChatHandler(reg, nil, nil, nil)
 	hub := ws.NewHub(handler, "*")
 	router := api.NewRouter(cfg, reg, hub)
 
