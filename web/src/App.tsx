@@ -1,120 +1,47 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Wifi, WifiOff } from 'lucide-react'
-import { ChatContainer } from './components/Chat/ChatContainer'
-import { DiffViewer } from './components/Diff/DiffViewer'
-import { ProviderSelector } from './components/Provider/ProviderSelector'
-import { useWebSocket } from './hooks/useWebSocket'
-import { useChat } from './hooks/useChat'
-import { useVoice } from './hooks/useVoice'
-import { api, type ProvidersResponse } from './services/api'
+import React from 'react';
+import ChatContainer from './components/Chat/ChatContainer';
+import ProviderSelector from './components/Provider/ProviderSelector';
+import DiffViewer from './components/Diff/DiffViewer';
+import { useChat } from './hooks/useChat';
+import { useVoice } from './hooks/useVoice';
 
 function App() {
-  const { send, subscribe, connected } = useWebSocket()
-  const [providers, setProviders] = useState<ProvidersResponse>({
-    llm: [],
-    tts: [],
-    stt: [],
-  })
-  const [selectedLLM, setSelectedLLM] = useState('')
-  const [selectedTTS, setSelectedTTS] = useState('')
-  const [selectedSTT, setSelectedSTT] = useState('')
-
-  useEffect(() => {
-    api.getProviders().then(p => {
-      setProviders(p)
-      if (p.llm.length > 0 && !selectedLLM) setSelectedLLM(p.llm[0])
-      if (p.tts.length > 0 && !selectedTTS) setSelectedTTS(p.tts[0])
-      if (p.stt.length > 0 && !selectedSTT) setSelectedSTT(p.stt[0])
-    }).catch(() => {
-      // Providers not available yet
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const {
-    messages,
-    isStreaming,
-    pendingDiff,
-    sendMessage,
-    cancelStream,
-    approveDiff,
-    rejectDiff,
-  } = useChat({ send, subscribe, providerId: selectedLLM })
-
-  const handleTranscript = useCallback(
-    (text: string) => {
-      sendMessage(text)
-    },
-    [sendMessage],
-  )
-
-  const { isRecording, isTranscribing, startRecording, stopRecording } =
-    useVoice({ onTranscript: handleTranscript, sttProvider: selectedSTT })
+  const { messages, sendMessage, isLoading, diff } = useChat();
+  const { isListening, startListening, stopListening } = useVoice(sendMessage);
 
   return (
-    <div className="flex h-screen flex-col bg-gray-950 text-gray-100">
-      <header className="flex items-center justify-between border-b border-gray-800 px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold">FlyAGI</h1>
-          <div className="flex items-center gap-1 text-xs">
-            {connected ? (
-              <Wifi className="h-3.5 w-3.5 text-green-500" />
-            ) : (
-              <WifiOff className="h-3.5 w-3.5 text-red-500" />
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <h1 className="text-2xl font-bold text-gray-900">FlyAGI v2</h1>
+            <ProviderSelector />
+          </div>
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <ChatContainer 
+              messages={messages}
+              onSendMessage={sendMessage}
+              isLoading={isLoading}
+              isListening={isListening}
+              onStartListening={startListening}
+              onStopListening={stopListening}
+            />
+          </div>
+          
+          <div className="space-y-4">
+            {diff && (
+              <DiffViewer diff={diff} />
             )}
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {providers.llm.length > 0 && (
-            <ProviderSelector
-              label="LLM"
-              providers={providers.llm}
-              selected={selectedLLM}
-              onChange={setSelectedLLM}
-            />
-          )}
-          {providers.tts.length > 0 && (
-            <ProviderSelector
-              label="TTS"
-              providers={providers.tts}
-              selected={selectedTTS}
-              onChange={setSelectedTTS}
-            />
-          )}
-          {providers.stt.length > 0 && (
-            <ProviderSelector
-              label="STT"
-              providers={providers.stt}
-              selected={selectedSTT}
-              onChange={setSelectedSTT}
-            />
-          )}
-        </div>
-      </header>
-
-      <main className="flex-1 overflow-hidden">
-        <ChatContainer
-          messages={messages}
-          isStreaming={isStreaming}
-          onSend={sendMessage}
-          onCancel={cancelStream}
-          isRecording={isRecording}
-          isTranscribing={isTranscribing}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-        />
       </main>
-
-      {pendingDiff && (
-        <DiffViewer
-          requestId={pendingDiff.requestId}
-          description={pendingDiff.description}
-          diffs={pendingDiff.diffs}
-          onApprove={approveDiff}
-          onReject={rejectDiff}
-        />
-      )}
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
